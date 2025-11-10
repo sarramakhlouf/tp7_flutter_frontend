@@ -24,7 +24,7 @@ class _FormationScreenState extends State<FormationScreen> {
   Future<void> addFormation() async {
     if (_titreController.text.isEmpty) return;
     await http.post(
-      Uri.parse(apiUrl),
+      Uri.parse('$apiUrl/add'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({'titre': _titreController.text}),
     );

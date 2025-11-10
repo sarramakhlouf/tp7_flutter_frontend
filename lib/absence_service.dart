@@ -26,7 +26,7 @@ class AbsenceService {
 
   Future<void> insert(Absence abs) async {
     await http.post(
-      Uri.parse(baseUrl),
+      Uri.parse('$baseUrl/add'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(abs.toJson()),
     );
@@ -34,7 +34,7 @@ class AbsenceService {
 
   Future<void> delete(Absence abs) async {
     await http.delete(
-      Uri.parse(baseUrl),
+      Uri.parse('$baseUrl/delete'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(abs.toJson()),
     );
