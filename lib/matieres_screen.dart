@@ -4,7 +4,8 @@ import 'dart:convert';
 import 'matiere.dart';
 
 class MatiereScreen extends StatefulWidget {
-  const MatiereScreen({super.key});
+  final String token; // token JWT reçu depuis le login
+  const MatiereScreen({super.key, required this.token});
 
   @override
   State<MatiereScreen> createState() => _MatiereScreenState();
@@ -12,6 +13,11 @@ class MatiereScreen extends StatefulWidget {
 
 class _MatiereScreenState extends State<MatiereScreen> {
   late Future<List<Matiere>> futureMatieres;
+
+  Map<String, String> get headers => {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer ${widget.token}',
+  };
 
   @override
   void initState() {
@@ -22,6 +28,7 @@ class _MatiereScreenState extends State<MatiereScreen> {
   Future<List<Matiere>> fetchMatieres() async {
     final response = await http.get(
       Uri.parse('http://10.0.2.2:8088/api/matieres'),
+      headers: headers,
     );
 
     if (response.statusCode == 200) {
@@ -35,7 +42,7 @@ class _MatiereScreenState extends State<MatiereScreen> {
   Future<void> addMatiere(String intMat, String description) async {
     final response = await http.post(
       Uri.parse('http://10.0.2.2:8088/api/matieres/add'),
-      headers: {'Content-Type': 'application/json'},
+      headers: headers,
       body: json.encode({'intMat': intMat, 'description': description}),
     );
 
@@ -51,7 +58,7 @@ class _MatiereScreenState extends State<MatiereScreen> {
   Future<void> updateMatiere(int id, String intMat, String description) async {
     final response = await http.put(
       Uri.parse('http://10.0.2.2:8088/api/matieres/edit/$id'),
-      headers: {'Content-Type': 'application/json'},
+      headers: headers,
       body: json.encode({'intMat': intMat, 'description': description}),
     );
 
@@ -67,6 +74,7 @@ class _MatiereScreenState extends State<MatiereScreen> {
   Future<void> deleteMatiere(int id) async {
     final response = await http.delete(
       Uri.parse('http://10.0.2.2:8088/api/matieres/$id'),
+      headers: headers,
     );
 
     if (response.statusCode == 200) {

@@ -1,4 +1,6 @@
 class User {
+  static String token = "";
+
   int id;
   String email;
   User(this.id, this.email);

@@ -2,25 +2,25 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
-import 'package:tp7_flutter_frontend/dashboard.dart';
-import 'package:tp7_flutter_frontend/register.dart';
-import 'package:tp7_flutter_frontend/user.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dashboard.dart';
+import 'register.dart';
 
 class Login extends StatefulWidget {
   const Login({Key? key}) : super(key: key);
 
   @override
-  _LoginState createState() => _LoginState();
+  State<Login> createState() => _LoginScreenState();
 }
 
-class _LoginState extends State<Login> {
+class _LoginScreenState extends State<Login> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  String url = "http://10.0.2.2:8088/login";
+  final String url = "http://10.0.2.2:8088/login";
 
-  Future<User> login(String email, String password) async {
+  Future<String> login(String email, String password) async {
     var res = await http.post(
       Uri.parse(url),
       headers: {'Content-Type': 'application/json'},
@@ -28,32 +28,53 @@ class _LoginState extends State<Login> {
     );
 
     if (res.statusCode == 200 && res.body.isNotEmpty) {
-      return User.fromMap(jsonDecode(res.body));
+      if (res.body == "Invalid credentials") {
+        throw Exception('Email ou mot de passe incorrect !');
+      }
+      return res.body;
     } else {
-      throw Exception('Invalid credentials');
+      throw Exception('Erreur lors de la connexion');
     }
   }
 
   handleLogin() async {
     if (_formKey.currentState!.validate()) {
       try {
-        User user = await login(
+        String token = await login(
           _emailController.text,
           _passwordController.text,
         );
-        Navigator.push(
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('jwt_token', token);
+
+        Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => Dashboard(user: user)),
+          MaterialPageRoute(builder: (context) => Dashboard(token: token)),
         );
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Email ou mot de passe incorrect !'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
         );
       }
     }
+  }
+
+  Future<void> checkAutoLogin() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? savedToken = prefs.getString('jwt_token');
+    if (savedToken != null) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => Dashboard(token: savedToken)),
+      );
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    checkAutoLogin();
   }
 
   @override
@@ -99,7 +120,9 @@ class _LoginState extends State<Login> {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => Register()),
+                        MaterialPageRoute(
+                          builder: (context) => const Register(),
+                        ),
                       );
                     },
                     child: const Text("Créer un compte"),

@@ -1,21 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:tp7_flutter_frontend/drawer.dart';
-import 'package:tp7_flutter_frontend/user.dart';
 
 class Dashboard extends StatelessWidget {
-  final User user;
-  const Dashboard({required this.user, Key? key}) : super(key: key);
+  final String token; // <-- doit être final
+  const Dashboard({required this.token, Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Bienvenue ${user.email}"),
+        title: const Text("Dashboard"),
         backgroundColor: Colors.purple,
       ),
-      drawer: const AppDrawer(),
-      body: const Center(
-        child: Text("Connexion réussie !", style: TextStyle(fontSize: 20)),
+      drawer: AppDrawer(token: token),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text("Connexion réussie !", style: TextStyle(fontSize: 20)),
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }

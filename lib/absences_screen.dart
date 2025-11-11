@@ -1,35 +1,31 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'absence_service.dart';
 import 'absence.dart';
 
 class AbsenceScreen extends StatefulWidget {
-  const AbsenceScreen({super.key});
+  final String token; // token JWT reçu depuis le login
+  const AbsenceScreen({super.key, required this.token});
 
   @override
   State<AbsenceScreen> createState() => _AbsenceScreenState();
 }
 
 class _AbsenceScreenState extends State<AbsenceScreen> {
-  final AbsenceService service = AbsenceService();
+  final String baseUrl = "http://10.0.2.2:8088";
 
   List<Absence> absences = [];
   bool isLoading = true;
 
-  // Données pour les listes déroulantes
   List etudiants = [];
   List matieres = [];
 
   Map<String, dynamic>? selectedEtudiant;
   Map<String, dynamic>? selectedMatiere;
+  String? classeAssociee;
 
-  final String baseUrl = "http://10.0.2.2:8088";
-
-  // Champs
   final _dateController = TextEditingController();
   final _nhaController = TextEditingController();
-  String? classeAssociee;
 
   @override
   void initState() {
@@ -39,26 +35,48 @@ class _AbsenceScreenState extends State<AbsenceScreen> {
     _fetchMatieres();
   }
 
+  // --------------------- Requêtes sécurisées ---------------------
   Future<void> _loadAbsences() async {
     try {
-      final list = await service.getAll();
-      setState(() {
-        absences = list;
-        isLoading = false;
-      });
+      final res = await http.get(
+        Uri.parse("$baseUrl/api/absences"),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.token}',
+        },
+      );
+
+      if (res.statusCode == 200) {
+        final data = json.decode(res.body) as List;
+        setState(() {
+          absences = data.map((e) => Absence.fromJson(e)).toList();
+          isLoading = false;
+        });
+      } else {
+        _showSnack("Erreur chargement absences : ${res.statusCode}");
+      }
     } catch (e) {
-      _showSnack("Erreur de chargement : $e");
+      _showSnack("Erreur chargement absences : $e");
     }
   }
 
   Future<void> _fetchEtudiants() async {
     try {
-      final res = await http.get(Uri.parse("$baseUrl/api/etudiants"));
+      final res = await http.get(
+        Uri.parse("$baseUrl/api/etudiants"),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.token}',
+        },
+      );
+
       if (res.statusCode == 200) {
         final data = json.decode(res.body);
         setState(() {
           etudiants = data;
         });
+      } else {
+        _showSnack("Erreur chargement étudiants : ${res.statusCode}");
       }
     } catch (e) {
       _showSnack("Erreur chargement étudiants : $e");
@@ -67,12 +85,21 @@ class _AbsenceScreenState extends State<AbsenceScreen> {
 
   Future<void> _fetchMatieres() async {
     try {
-      final res = await http.get(Uri.parse("$baseUrl/api/matieres"));
+      final res = await http.get(
+        Uri.parse("$baseUrl/api/matieres"),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.token}',
+        },
+      );
+
       if (res.statusCode == 200) {
         final data = json.decode(res.body);
         setState(() {
           matieres = data;
         });
+      } else {
+        _showSnack("Erreur chargement matières : ${res.statusCode}");
       }
     } catch (e) {
       _showSnack("Erreur chargement matières : $e");
@@ -87,43 +114,66 @@ class _AbsenceScreenState extends State<AbsenceScreen> {
   }
 
   Future<void> _insertAbsence() async {
+    if (selectedEtudiant == null || selectedMatiere == null) {
+      _showSnack("Veuillez sélectionner un étudiant et une matière.");
+      return;
+    }
+
+    final nce = selectedEtudiant!["id"];
+    final codMat = selectedMatiere!["codMat"];
+
+    if (nce == null || codMat == null) {
+      _showSnack("Les identifiants (id/codMat) sont invalides.");
+      return;
+    }
+
     try {
-      if (selectedEtudiant == null || selectedMatiere == null) {
-        _showSnack("Veuillez sélectionner un étudiant et une matière.");
-        return;
-      }
+      final abs = {
+        "nce": nce,
+        "codMat": codMat,
+        "dateA": _dateController.text,
+        "nha": int.parse(_nhaController.text),
+      };
 
-      final nce = selectedEtudiant!["id"]; // ✅ correspond à l'ID réel
-      final codMat = selectedMatiere!["codMat"];
-
-      if (nce == null || codMat == null) {
-        _showSnack("Les identifiants (id/codMat) sont invalides.");
-        return;
-      }
-
-      final abs = Absence(
-        codMat: codMat is int ? codMat : int.parse(codMat.toString()),
-        nce: nce is int ? nce : int.parse(nce.toString()),
-        dateA: _dateController.text,
-        nha: int.parse(_nhaController.text),
+      final res = await http.post(
+        Uri.parse("$baseUrl/api/absences"),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.token}',
+        },
+        body: json.encode(abs),
       );
 
-      await service.insert(abs);
-      _clearFields();
-      _loadAbsences();
-      _showSnack("Absence ajoutée avec succès");
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        _clearFields();
+        _loadAbsences();
+        _showSnack("Absence ajoutée avec succès");
+      } else {
+        _showSnack("Erreur ajout absence : ${res.statusCode}");
+      }
     } catch (e) {
-      _showSnack("Erreur d’ajout : $e");
+      _showSnack("Erreur ajout absence : $e");
     }
   }
 
-  Future<void> _deleteAbsence(Absence abs) async {
+  Future<void> _deleteAbsence(Absence a) async {
     try {
-      await service.delete(abs);
-      _loadAbsences();
-      _showSnack("Absence supprimée");
+      final res = await http.delete(
+        Uri.parse("$baseUrl/api/absences/delete"),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.token}',
+        },
+      );
+
+      if (res.statusCode == 200) {
+        _loadAbsences();
+        _showSnack("Absence supprimée");
+      } else {
+        _showSnack("Erreur suppression : ${res.statusCode}");
+      }
     } catch (e) {
-      _showSnack("Erreur de suppression : $e");
+      _showSnack("Erreur suppression : $e");
     }
   }
 
@@ -141,6 +191,7 @@ class _AbsenceScreenState extends State<AbsenceScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
+  // --------------------- UI ---------------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -152,7 +203,6 @@ class _AbsenceScreenState extends State<AbsenceScreen> {
         padding: const EdgeInsets.all(12),
         child: Column(
           children: [
-            // ---- Liste déroulante des étudiants ----
             DropdownButtonFormField<Map<String, dynamic>>(
               decoration: const InputDecoration(
                 labelText: "Sélectionner un étudiant",
@@ -170,8 +220,6 @@ class _AbsenceScreenState extends State<AbsenceScreen> {
               },
             ),
             const SizedBox(height: 10),
-
-            // ---- Classe associée ----
             TextFormField(
               readOnly: true,
               decoration: InputDecoration(
@@ -182,8 +230,6 @@ class _AbsenceScreenState extends State<AbsenceScreen> {
               controller: TextEditingController(text: classeAssociee ?? ""),
             ),
             const SizedBox(height: 10),
-
-            // ---- Liste déroulante des matières ----
             DropdownButtonFormField<Map<String, dynamic>>(
               decoration: const InputDecoration(
                 labelText: "Sélectionner une matière",
@@ -203,8 +249,6 @@ class _AbsenceScreenState extends State<AbsenceScreen> {
               },
             ),
             const SizedBox(height: 10),
-
-            // ---- Date et nombre d’heures ----
             TextField(
               controller: _dateController,
               decoration: const InputDecoration(
@@ -221,10 +265,7 @@ class _AbsenceScreenState extends State<AbsenceScreen> {
               ),
               keyboardType: TextInputType.number,
             ),
-
             const SizedBox(height: 12),
-
-            // ---- Boutons ----
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
@@ -247,8 +288,6 @@ class _AbsenceScreenState extends State<AbsenceScreen> {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
-
-            // ---- Liste des absences ----
             Expanded(
               child: isLoading
                   ? const Center(child: CircularProgressIndicator())

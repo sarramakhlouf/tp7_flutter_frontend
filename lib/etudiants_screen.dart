@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 class EtudiantScreen extends StatefulWidget {
-  const EtudiantScreen({super.key});
+  final String token; // token JWT reçu depuis le login
+  const EtudiantScreen({super.key, required this.token});
 
   @override
   State<EtudiantScreen> createState() => _EtudiantScreenState();
@@ -24,9 +25,17 @@ class _EtudiantScreenState extends State<EtudiantScreen> {
     getClasses();
   }
 
+  Map<String, String> get headers => {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer ${widget.token}",
+  };
+
   Future<void> getClasses() async {
     try {
-      final res = await http.get(Uri.parse("$baseUrl/api/classes"));
+      final res = await http.get(
+        Uri.parse("$baseUrl/api/classes"),
+        headers: headers,
+      );
       if (res.statusCode == 200) {
         setState(() {
           classes = json.decode(res.body);
@@ -42,6 +51,7 @@ class _EtudiantScreenState extends State<EtudiantScreen> {
     try {
       final res = await http.get(
         Uri.parse("$baseUrl/api/etudiants/classe/$selectedClasse"),
+        headers: headers,
       );
       if (res.statusCode == 200) {
         setState(() {
@@ -58,7 +68,7 @@ class _EtudiantScreenState extends State<EtudiantScreen> {
     try {
       final res = await http.post(
         Uri.parse("$baseUrl/api/classes/add"),
-        headers: {"Content-Type": "application/json"},
+        headers: headers,
         body: json.encode({"nomClass": newClasseController.text}),
       );
       if (res.statusCode == 200 || res.statusCode == 201) {
@@ -78,6 +88,7 @@ class _EtudiantScreenState extends State<EtudiantScreen> {
     required String lieuNais,
   }) async {
     if (selectedClasse == null) return;
+
     final url = id == null
         ? "$baseUrl/api/etudiants/add"
         : "$baseUrl/api/etudiants/$id";
@@ -88,7 +99,7 @@ class _EtudiantScreenState extends State<EtudiantScreen> {
       final res = await (method == "POST"
           ? http.post(
               Uri.parse(url),
-              headers: {"Content-Type": "application/json"},
+              headers: headers,
               body: json.encode({
                 "prenom": prenom,
                 "nom": nom,
@@ -99,7 +110,7 @@ class _EtudiantScreenState extends State<EtudiantScreen> {
             )
           : http.put(
               Uri.parse(url),
-              headers: {"Content-Type": "application/json"},
+              headers: headers,
               body: json.encode({
                 "prenom": prenom,
                 "nom": nom,
@@ -180,7 +191,10 @@ class _EtudiantScreenState extends State<EtudiantScreen> {
 
   void deleteEtudiant(int id) async {
     try {
-      final res = await http.delete(Uri.parse("$baseUrl/api/etudiants/$id"));
+      final res = await http.delete(
+        Uri.parse("$baseUrl/api/etudiants/$id"),
+        headers: headers,
+      );
       if (res.statusCode == 200) {
         getEtudiantsByClasse();
       }

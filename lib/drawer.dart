@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:tp7_flutter_frontend/matieres_screen.dart';
+import 'package:tp7_flutter_frontend/user.dart';
 import 'etudiants_screen.dart';
 import 'formations_screen.dart';
 import 'absences_screen.dart';
+import 'login.dart';
 
 class AppDrawer extends StatelessWidget {
-  const AppDrawer({super.key});
+  final String token; // token passé depuis le Dashboard ou le Login
+  const AppDrawer({super.key, required this.token});
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +23,7 @@ class AppDrawer extends StatelessWidget {
               style: TextStyle(color: Colors.white, fontSize: 24),
             ),
           ),
-          // ✅ Formations
+          // Formations
           ListTile(
             title: const Text('Formations'),
             leading: const Icon(Icons.school_outlined),
@@ -28,41 +31,59 @@ class AppDrawer extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const FormationScreen(),
+                  builder: (context) => FormationScreen(token: token),
                 ),
               );
             },
           ),
-          // ✅ Étudiants
+          // Étudiants
           ListTile(
             title: const Text('Étudiants'),
             leading: const Icon(Icons.person_outline),
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const EtudiantScreen()),
+                MaterialPageRoute(
+                  builder: (context) => EtudiantScreen(token: token),
+                ),
               );
             },
           ),
-          //Absences
+          // Absences
           ListTile(
             title: const Text('Absences'),
             leading: const Icon(Icons.book_outlined),
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => AbsenceScreen()),
+                MaterialPageRoute(
+                  builder: (context) => AbsenceScreen(token: token),
+                ),
               );
             },
           ),
-          //Matieres
+          // Matières
           ListTile(
             title: const Text('Matieres'),
-            leading: const Icon(Icons.book_outlined),
+            leading: const Icon(Icons.menu_book), // nouvelle icône
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => MatiereScreen()),
+                MaterialPageRoute(
+                  builder: (context) => MatiereScreen(token: token),
+                ),
+              );
+            },
+          ),
+          const Divider(),
+          // Logout
+          ListTile(
+            title: const Text('Déconnexion'),
+            leading: const Icon(Icons.logout, color: Colors.red),
+            onTap: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const Login()),
               );
             },
           ),

@@ -11,10 +11,12 @@ class Absence {
     required this.nha,
   });
 
+  // Sérialisation pour envoyer au backend
   Map<String, dynamic> toJson() {
     return {"codMat": codMat, "nce": nce, "dateA": dateA, "nha": nha};
   }
 
+  // Désérialisation depuis le backend
   factory Absence.fromJson(Map<String, dynamic> json) {
     return Absence(
       codMat: json["codMat"],
