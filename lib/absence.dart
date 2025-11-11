@@ -11,10 +11,16 @@ class Absence {
     required this.nha,
   });
 
-  Map<String, dynamic> toJson() => {
-    'codMat': codMat,
-    'nce': nce,
-    'dateA': dateA,
-    'nha': nha,
-  };
+  Map<String, dynamic> toJson() {
+    return {"codMat": codMat, "nce": nce, "dateA": dateA, "nha": nha};
+  }
+
+  factory Absence.fromJson(Map<String, dynamic> json) {
+    return Absence(
+      codMat: json["codMat"],
+      nce: json["nce"],
+      dateA: json["dateA"],
+      nha: json["nha"],
+    );
+  }
 }

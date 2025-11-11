@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:tp7_flutter_frontend/matiere.dart';
 import 'dart:convert';
+import 'matiere.dart';
 
 class MatiereScreen extends StatefulWidget {
   const MatiereScreen({super.key});
@@ -30,6 +30,128 @@ class _MatiereScreenState extends State<MatiereScreen> {
     } else {
       throw Exception('Impossible de charger les matières');
     }
+  }
+
+  Future<void> addMatiere(String intMat, String description) async {
+    final response = await http.post(
+      Uri.parse('http://10.0.2.2:8088/api/matieres/add'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({'intMat': intMat, 'description': description}),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      setState(() {
+        futureMatieres = fetchMatieres();
+      });
+    } else {
+      throw Exception('Erreur lors de l\'ajout de la matière');
+    }
+  }
+
+  Future<void> updateMatiere(int id, String intMat, String description) async {
+    final response = await http.put(
+      Uri.parse('http://10.0.2.2:8088/api/matieres/edit/$id'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({'intMat': intMat, 'description': description}),
+    );
+
+    if (response.statusCode == 200) {
+      setState(() {
+        futureMatieres = fetchMatieres();
+      });
+    } else {
+      throw Exception('Erreur lors de la modification');
+    }
+  }
+
+  Future<void> deleteMatiere(int id) async {
+    final response = await http.delete(
+      Uri.parse('http://10.0.2.2:8088/api/matieres/$id'),
+    );
+
+    if (response.statusCode == 200) {
+      setState(() {
+        futureMatieres = fetchMatieres();
+      });
+    } else {
+      throw Exception('Erreur lors de la suppression');
+    }
+  }
+
+  void _showMatiereDialog({Matiere? matiere}) {
+    final intMatController = TextEditingController(
+      text: matiere != null ? matiere.intMat : '',
+    );
+    final descController = TextEditingController(
+      text: matiere != null ? matiere.description : '',
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          matiere == null ? 'Ajouter une matière' : 'Modifier la matière',
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: intMatController,
+              decoration: const InputDecoration(labelText: 'Intitulé'),
+            ),
+            TextField(
+              controller: descController,
+              decoration: const InputDecoration(labelText: 'Description'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final intMat = intMatController.text;
+              final desc = descController.text;
+              if (intMat.isNotEmpty && desc.isNotEmpty) {
+                if (matiere == null) {
+                  addMatiere(intMat, desc);
+                } else {
+                  updateMatiere(matiere.codMat!, intMat, desc);
+                }
+                Navigator.pop(context);
+              }
+            },
+            child: Text(matiere == null ? 'Ajouter' : 'Modifier'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDelete(Matiere matiere) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer la matière'),
+        content: Text('Voulez-vous vraiment supprimer "${matiere.intMat}" ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () {
+              deleteMatiere(matiere.codMat!);
+              Navigator.pop(context);
+            },
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -66,12 +188,30 @@ class _MatiereScreenState extends State<MatiereScreen> {
                     ),
                     title: Text(matiere.intMat),
                     subtitle: Text(matiere.description),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit, color: Colors.orange),
+                          onPressed: () => _showMatiereDialog(matiere: matiere),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () => _confirmDelete(matiere),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },
             );
           }
         },
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.purple,
+        onPressed: () => _showMatiereDialog(),
+        child: const Icon(Icons.add),
       ),
     );
   }
